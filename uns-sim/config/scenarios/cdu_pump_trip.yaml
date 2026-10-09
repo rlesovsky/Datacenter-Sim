@@ -1,0 +1,11 @@
+name: CDU pump trip
+events:
+  - at_s: 30
+    cell: CDU01
+    sets:
+      Pump2VFDRunSts: false
+      Level2CommonAlm: true
+  - at_s: 45
+    cell: CDU01
+    sets:
+      Pump3VFDRunSts: true

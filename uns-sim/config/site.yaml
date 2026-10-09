@@ -1,0 +1,23 @@
+# Local HiveMQ Edge. Plain UNS JSON, one hall.
+broker:
+  host: 127.0.0.1
+  port: 1883
+  tls: false
+  username: ""
+  password: ""
+  client_id: uns-sim-w1
+
+enterprise: Enterprise
+site: Site
+wings: [1]
+halls: [1]
+
+# uns is the only mode in this build. Sparkplug B is later.
+mode: uns
+time_scale: 1.0
+deadband_pct: 0.5
+catalog: ../../docs/Data_Wing_UNS.md
+
+# Set to scenarios/cdu_pump_trip.yaml to run the pump-trip script.
+scenario: null
+stats_interval_s: 10
