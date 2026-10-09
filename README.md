@@ -11,7 +11,7 @@ This cut publishes plain UNS JSON. Sparkplug B is not included yet.
 - Python 3.9 or newer
 - An MQTT broker on `127.0.0.1:1883` with no username (HiveMQ Edge is what this was run against)
 
-Broker, wing, and hall start from `uns-sim/config/site.yaml`. The hall page has a broker bar for the IP, port, username, and password. Connect saves that file and both the page and the simulator use the new broker. Leave the password blank to keep the one already saved.
+Broker, wing, and hall start from `uns-sim/config/site.yaml`. The hall page header has a broker menu for the IP, port, username, and password. Connect saves that file and both the page and the simulator use the new broker. Leave the password blank to keep the one already saved.
 
 ## Run it
 

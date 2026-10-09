@@ -436,10 +436,28 @@ async function loadBroker() {
   document.getElementById("broker-port").value = broker.port || 1883;
   document.getElementById("broker-user").value = broker.username || "";
   const status = document.getElementById("broker-status");
-  status.textContent = broker.host ? `Using ${broker.host}:${broker.port}` : "";
+  const label = broker.host ? `${broker.host}:${broker.port}` : "Broker";
+  status.textContent = broker.host ? `Using ${label}` : "";
+  document.getElementById("broker-toggle").textContent = label;
+}
+
+function setBrokerOpen(open) {
+  const form = document.getElementById("broker-form");
+  form.hidden = !open;
+  document.getElementById("broker-toggle").setAttribute("aria-expanded", open ? "true" : "false");
 }
 
 function bindBroker() {
+  const menu = document.getElementById("broker-menu");
+  document.getElementById("broker-toggle").addEventListener("click", () => {
+    setBrokerOpen(document.getElementById("broker-form").hidden);
+  });
+  document.addEventListener("click", (event) => {
+    if (!menu.contains(event.target)) setBrokerOpen(false);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setBrokerOpen(false);
+  });
   document.getElementById("broker-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const status = document.getElementById("broker-status");
@@ -465,7 +483,10 @@ function bindBroker() {
       Object.keys(points).forEach((name) => delete points[name]);
       dirty = true;
     }
-    status.textContent = `Using ${result.host}:${result.port}`;
+    const label = `${result.host}:${result.port}`;
+    status.textContent = `Using ${label}`;
+    document.getElementById("broker-toggle").textContent = label;
+    setBrokerOpen(false);
   });
 }
 
