@@ -1,40 +1,160 @@
 # Data Wing UNS (Unified Namespace)
 
-Draft 2026-10-07. One namespace per data hall, all 11 halls rolling up into one UNS per data wing on the wing broker. The hierarchy stops at the cell (one controller); every data point is a leaf topic under its cell.
+**Updated: 2026-10-09** | Draft — Reconciled against the live HiveMQ broker (Test UNS block, subscription: `DataCenter/#`).
+
+One namespace per data hall, all 11 halls rolling up into one UNS per data wing on the wing broker. The hierarchy stops at the cell (one controller); every data point is a leaf topic under its cell.
+
+The simulator's current publish list is the short demo catalog in `KPI_UNS.md`. This file is still the full hall register map (2,000 points). An earlier full publish left retained topics on the broker; those are not the same thing as the topics the simulator is publishing now.
+
+## Topic root — live vs. prior draft
+
+| Source | Root |
+| --- | --- |
+| **Live broker (confirmed)** | `DataCenter/Site/...` |
+| **UNS doc (2026-10-07 draft)** | `Enterprise/Site/...` |
+
+The live simulator publishes under `DataCenter/Site/`. This document uses that root. The simulator enterprise name in `uns-sim/config/site.yaml` is already `DataCenter`. Ignition MQTT Engine subscriptions still need to match before production commissioning.
 
 ## Hierarchy (ISA-95)
 
 | Level | ISA-95 | Example | What it is |
 | --- | --- | --- | --- |
-| 1 | Enterprise | `Enterprise` | Owner (placeholder) |
-| 2 | Site | `Site` | Campus (placeholder) |
+| 1 | Enterprise | `DataCenter` | Root namespace — confirmed live |
+| 2 | Site | `Site` | Campus placeholder |
 | 3 | Area | `Wing01` to `Wing04` | Data wing. Each wing is its own UNS on its own broker. |
 | 4 | Line | `Hall01` to `Hall11` | Data hall namespace |
 | 5 | Cell | `CDU01`, `Chiller03` | One controller. Deepest hierarchy level. |
 | Leaf | Point | `ServerGlySupTemp` | One data point |
 
-Topic form:
+**Topic form:**
 
 ```
-Enterprise/Site/<Wing>/<Hall>/<Cell>/<Point>
-Enterprise/Site/Wing01/Hall01/CDU01/ServerGlySupTemp
-
+DataCenter/Site/<Wing>/<Hall>/<Cell>/<Point>
+DataCenter/Site/Wing01/Hall01/CDU01/ServerGlySupTemp
 ```
 
-- **Hall namespace:** `Enterprise/Site/WingNN/HallNN/#`
-- **Wing UNS:** `Enterprise/Site/WingNN/#` (all 11 halls)
+- **Hall namespace:** `DataCenter/Site/WingNN/HallNN/#`
+- **Wing UNS:** `DataCenter/Site/WingNN/#` (all 11 halls)
+- **Campus UNS:** `DataCenter/Site/Campus/#` (see Campus-level topics below)
+
+## Setup — Ignition MQTT Engine (wing broker subscription)
+
+This section describes how to configure the Ignition backend gateway (Tier 2) to subscribe to the UNS from the HiveMQ Enterprise wing broker.
+
+### MQTT Engine — broker connection
+
+| Setting | Value |
+| --- | --- |
+| **Module** | Ignition MQTT Engine (Cirrus Link) |
+| **Broker URL** | `tcp://hivemq-enterprise-wingNN:1883` (or TLS: `ssl://....:8883`) |
+| **Client ID** | `ignition-backend-wingNN` (unique per wing) |
+| **Username / Password** | Per HiveMQ Enterprise security policy |
+| **Keep Alive** | 60 s |
+| **Session** | Clean session = **false** (persistent — survives reconnect without losing QoS 1 messages) |
+| **Max In-Flight** | 1,000 (tune based on broker throughput) |
+
+### Subscriptions
+
+Add these in MQTT Engine, on the Subscriptions tab:
+
+| Subscription topic | QoS | Purpose |
+| --- | --- | --- |
+| `DataCenter/Site/WingNN/#` | 1 | All hall data for this wing (11 halls × ~2,710 unique topics) |
+| `DataCenter/Site/Campus/#` | 1 | Campus KPIs, electrical plant, generators, water, gas |
+
+Replace `WingNN` with `Wing01`, `Wing02`, `Wing03`, or `Wing04` on each backend gateway pair. Each wing backend is independent, so one gateway should not subscribe to every wing.
+
+### Tag provider
+
+1. In MQTT Engine settings, set the tag provider to a dedicated name, for example `Wing01_UNS`.
+2. Enable auto-create tags so the topic tree builds folders that match the UNS hierarchy: `Wing01_UNS/Wing01/Hall01/CDU01/ServerGlySupTemp`.
+3. Set the tag path delimiter to `/`.
+4. Enable JSON payload parsing. The payload is one JSON object. See Payload below.
+
+### JSON payload mapping
+
+| JSON field | Maps to | Notes |
+| --- | --- | --- |
+| `value` | Tag value | Numeric or boolean |
+| `units` | Engineering units | String, for example `"kW"`, `"degF"`, `"pct"` |
+| `quality` | Tag quality | Integer. 192 = Good (Sparkplug quality code). |
+| `ts` | Tag timestamp | Unix epoch in milliseconds |
+
+The live broker publishes `quality` as the integer `192`, not the string `"Good"` from the 2026-10-07 draft. The simulator already publishes `192`. Ignition should treat quality as a number. Sparkplug quality 192 maps to Good.
+
+### Write topics
+
+Writes use `<base topic>/set`:
+
+```
+DataCenter/Site/Wing01/Hall01/CDU01/ServerGlySupTempSP/set
+```
+
+In MQTT Engine, mark setpoint tags writable so a Perspective change publishes to the `/set` topic.
+
+```json
+{ "value": 80 }
+```
+
+Use QoS 1 on write topics.
+
+Campus topics are five segments (`DataCenter/Site/Campus/<Cell>/<Point>`). The simulator accepts hall writes only (seven segments, including `/set`).
+
+### HiveMQ Edge — per-hall broker (Tier A)
+
+Each data hall has its own HiveMQ Edge broker. Ignition tag collectors (Tier 1) publish to the hall broker. The hall broker forwards to the wing Enterprise broker over the HiveMQ bridge.
+
+| Item | Setting |
+| --- | --- |
+| **Bridge source** | HiveMQ Edge (hall) |
+| **Bridge destination** | HiveMQ Enterprise (wing) |
+| **Bridge topic filter** | `DataCenter/Site/WingNN/HallNN/#` |
+| **QoS** | 1 (at-least-once forwarding) |
+| **Retained message handling** | Forward retained = true, so the last value survives a broker restart |
 
 ## Cells per data hall
 
 | Cell | Controller | Protocol | Polled by | Points |
 | --- | --- | --- | --- | --- |
 | `ChillerMCP` | Chiller Master Control Panel | Modbus TCP/IP | Primary + Secondary | 86 |
-| `Chiller01 to Chiller10` | Individual Chiller | Modbus TCP/IP | Primary only | 149 x 10 = 1490 |
+| `Chiller01 to Chiller10` | Individual Chiller | Modbus TCP/IP | Primary only | 149 × 10 = 1,490 |
 | `CDU01` | Coolant Distribution Unit | Modbus TCP/IP | Primary + Secondary | 94 |
 | `AireBlockMCP` | Data Hall AireBlock MCP | Modbus TCP/IP | Primary + Secondary | 225 |
 | `MiniAireBlock01` | Mini AireBlock (CCU) | BACnet/IP | Primary only | 105 |
 | **Total per hall** |  |  |  | **2,000** |
 | **Total per wing (11 halls)** |  |  |  | **22,000** |
+
+A count near 2,038 topics under `Wing01/Hall01` matches this 2,000-point map plus retained leftovers. The demo simulator is not publishing that full map.
+
+## Campus-level topics (confirmed live)
+
+These topics are `DataCenter/Site/Campus/#`. They are not per hall. Sample values below were read from the demo simulator on 2026-10-09 and will move.
+
+| Topic | Sample value | Units |
+| --- | --- | --- |
+| `Campus/ElecPlant/DemandKW` | 1,469.84 | kW |
+| `Campus/ElecPlant/PeakDemandKW` | 1,487.74 | kW |
+| `Campus/ElecPlant/YTDEnergyKWh` | 2,780,660 | kWh |
+| `Campus/ElecPlant/MonthEnergyKWh` | 309,504 | kWh |
+| `Campus/ElecPlant/MonthCost` | 22,284 | USD |
+| `Campus/ElecPlant/YTDCost` | 200,208 | USD |
+| `Campus/KPI/PUE` | 1.238 | ratio |
+| `Campus/KPI/CUE` | 0.39 | kg/kWh |
+| `Campus/KPI/WUE` | 0.81 | L/kWh |
+| `Campus/KPI/CO2e` | 119,469 | kg |
+| `Campus/KPI/CO2Saved` | 25,954 | kg |
+| `Campus/KPI/TenantMonthKWh` | 220,880 | kWh |
+| `Campus/KPI/AlarmResponseMin` | 12.58 | min |
+| `Campus/KPI/EquipUnavailable` | 0 | count |
+| `Campus/Gen/SiteProducedKW` | 312.0 | kW |
+| `Campus/Gen/SiteProducedKWh` | 67,237 | kWh |
+| `Campus/Gen/GreenEnergyKWh` | 67,236 | kWh |
+| `Campus/GasPlant/FlowSCFM` | 438.0 | scfm |
+| `Campus/GasPlant/SupplyPressure` | 59.0 | psi |
+| `Campus/Water/WaterGPM` | 5.08 | gpm |
+| `Campus/Water/SupplyPressure` | 46.6 | psi |
+
+Subscribe to `DataCenter/Site/Campus/#` on its own, and map it to a campus KPI provider for the dashboards. The point definitions for this short list are in `KPI_UNS.md`.
 
 ## Naming rules
 
@@ -50,13 +170,20 @@ Enterprise/Site/Wing01/Hall01/CDU01/ServerGlySupTemp
 
 ```json
 {
-  "value": 80.1,
+  "value": 80.5,
   "units": "degF",
-  "quality": "Good",
-  "ts": 1791390000000
+  "quality": 192,
+  "ts": 1791556073406
 }
-
 ```
+
+`quality` is an integer. 192 means Good, matching the Sparkplug B quality code. The 2026-10-07 draft used the string `"Good"`.
+
+## Retained messages
+
+- **Setpoints and alarm states** are retained. Examples seen live: `ServerGlySupTempSP`, `CCUSupAirTempSP`, fire alarm status, UPS status.
+- **Live process values** are not retained. Examples: condenser fan speeds, temperatures, flows.
+- **Write topics (`/set`)** are not retained.
 
 ## Sparkplug B mapping
 
@@ -72,7 +199,9 @@ If the collectors publish with Ignition MQTT Transmission, the topic follows the
 
 ## Point lists by cell
 
-Topic prefix for every row: `Enterprise/Site/<Wing>/<Hall>/<Cell>/`. A ⚑ in the Confirm column means the address, bit position or name was inferred and needs confirmation from ALC.
+Topic prefix for every row: `DataCenter/Site/<Wing>/<Hall>/<Cell>/`. A ⚑ in the Confirm column means the address, bit position, or name was inferred and needs confirmation from ALC.
+
+The tables below are the full register map. Notes under each cell name are what the live broker showed on 2026-10-09. The demo catalog publishes only the points called out in those notes, plus the campus topics above.
 
 ### ChillerMCP (Chiller Master Control Panel, Modbus TCP/IP)
 
@@ -167,7 +296,7 @@ Topic prefix for every row: `Enterprise/Site/<Wing>/<Hall>/<Cell>/`. A ⚑ in th
 
 ### Chiller01 to Chiller10 (Individual Chiller, Modbus TCP/IP)
 
-One template, repeated for Chiller01 to Chiller10.
+One template, repeated for Chiller01 to Chiller10. The live broker showed `Chiller01` active, including `CondFan1VFDSpdCmd` through `CondFan12VFDSpdCmd`, `ActivePowerTot`, and `ChillerGlyOutletTemp`. Fans 13 to 18 remain in this register map and are not in the demo catalog.
 
 | Point | Description | Units | Access | Category | Source | Scan | Confirm |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -323,6 +452,8 @@ One template, repeated for Chiller01 to Chiller10.
 
 ### CDU01 (Coolant Distribution Unit, Modbus TCP/IP)
 
+Live on the broker: `Pump1VFDRunSts`, `Pump2VFDRunSts`, `Pump3VFDRunSts`, `ServerGlySupTemp`, `ServerGlyRetTemp`, `ServerGlySupFlow`, `PriGlyValvePosFb`, `Pump1SpdCmd`, `Pump2SpdCmd`, `Pump3SpdCmd`, `LowestCHWHeaderDPLead`, `TotSecCoolingLoadLead`, `Level1CommonAlm`, and retained `ServerGlySupTempSP`. The write path `ServerGlySupTempSP/set` is live. `CHWHeaderDPSPLead` is also a writable setpoint in the demo catalog.
+
 | Point | Description | Units | Access | Category | Source | Scan | Confirm |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `LocalStartCmd` | CDU Local Start Command |  | R/W | Command | Coil 1 | Fast 500 ms |  |
@@ -421,6 +552,8 @@ One template, repeated for Chiller01 to Chiller10.
 | `CHWHeaderDPSPLead` | CDU Chilled Water Header DP Setpoint (Lead CDU) | psi | R/W | Setpoint | Holding Register 40005 | Slow 30 s |  |
 
 ### AireBlockMCP (Data Hall AireBlock MCP, Modbus TCP/IP)
+
+Live on the broker: `CCUSupTempAvg`, `DPAAvg`, `ColdAisleAvgTemp`, `CCUTotKW`, and retained `CCUSupAirTempSP`.
 
 | Point | Description | Units | Access | Category | Source | Scan | Confirm |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -652,6 +785,8 @@ One template, repeated for Chiller01 to Chiller10.
 
 ### MiniAireBlock01 (Mini AireBlock (CCU), BACnet/IP)
 
+Live on the broker: `RoomTemp`, `RoomHum`, `DischargeAirTemp`, and retained `RoomTempSP`. The full BACnet list below is unchanged. Fan status bits such as `Fan1CommError` and `Fan1GeneralError` are in this map; the demo catalog does not publish them.
+
 | Point | Description | Units | Access | Category | Source | Scan | Confirm |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `ValveFb` | Valve Feedback | % | R | Process | Analog Input 101 (CV-1 Feedback) | Analog 5 s |  |
@@ -759,3 +894,44 @@ One template, repeated for Chiller01 to Chiller10.
 | `Fan2DCLinkVoltHigh` | Fan 2 DC Link Voltage High |  | R | Alarm | Binary Value 621 (name TBC) | COV / 1 s | ⚑ |
 | `Fan2LineVoltHigh` | Fan 2 Line Voltage High |  | R | Alarm | Binary Value 622 (name TBC) | COV / 1 s | ⚑ |
 | `Fan2SheddingActive` | Fan 2 Shedding Active |  | R | Alarm | Binary Value 623 (FAN2_LRF) | COV / 1 s |  |
+
+## Hall-level cells confirmed on the live broker
+
+These cells are on the broker and are not part of the five-controller register map above. The demo catalog in `KPI_UNS.md` publishes them. Sample values are from 2026-10-09 and will move.
+
+| Topic | Sample value | Units | Notes |
+| --- | --- | --- | --- |
+| `Hall01/HallPower/TotalKW` | 1,771.9 | kW | Hall total power |
+| `Hall01/HallPower/ITKW` | 1,436.8 | kW | IT load only |
+| `Hall01/HallPower/VoltageLL` | 482.0 | V | Line-to-line voltage |
+| `Hall01/HallPower/PowerFactor` | 0.974 | pf | Power factor |
+| `Hall01/UPS01/LoadPct` | 80.8 | % | UPS load |
+| `Hall01/UPS01/BatteryPct` | 96.3 | % | UPS battery state of charge |
+| `Hall01/UPS01/OnBattery` | false |  | On-battery status, retained |
+| `Hall01/TurboCell01/RealPowerKW` | 311.8 | kW | TurboCell output |
+| `Hall01/TurboCell01/PowerSP` | 300.0 | kW | Setpoint, retained. Writable at `PowerSP/set` |
+| `Hall01/TurboCell01/RunSts` | true |  | Running |
+| `Hall01/TurboCell01/Alarm` | false |  | Alarm |
+| `Hall01/Lineup01/TotalKW` | 311.6 | kW | Lineup power |
+| `Hall01/Lineup01/OnlineCount` | 1 | count | Units online |
+| `Hall01/ChillerMCP/MasterCHWSupTemp` | 55.9 | °F | Also in the ChillerMCP register map |
+| `Hall01/ChillerMCP/MasterGlyFlowSensor` | 535.3 | gpm | Also in the ChillerMCP register map |
+| `Hall01/ChillerMCP/MasterCHWRetTemp` | 66.8 | °F | Also in the ChillerMCP register map |
+| `Hall01/ChillerMCP/GlySupWaterTempSP` | 56.0 | °F | Setpoint, retained |
+| `Hall01/FirePanel/Alarm` | false |  | Retained |
+| `Hall01/FirePanel/Trouble` | false |  | Retained |
+| `Hall01/FirePanel/Supervisory` | false |  | Retained |
+
+Add `HallPower`, `UPS01`, `TurboCell01`, `Lineup01`, and `FirePanel` to the Ignition tag provider. Their full point lists are still open; only the rows above are defined.
+
+## Open items — 2026-10-09
+
+| Item | Status | Action |
+| --- | --- | --- |
+| Topic root `DataCenter/Site` vs `Enterprise/Site` | Live root is `DataCenter/Site`. Simulator enterprise name is already `DataCenter`. | Confirm the same root for production Ignition subscriptions |
+| Quality field integer `192` vs string `"Good"` | Live broker and the simulator both publish integer `192` | Set the Ignition JSON handler to numeric quality |
+| `HallPower`, `UPS01`, `TurboCell01`, `Lineup01`, `FirePanel` | New cells, not in the five-controller map | Keep the rows above until each controller's register list is confirmed |
+| `CDU01/ServerGlySupTempSP/set` | Write path confirmed live | Configure the MQTT Engine tag as writable |
+| Campus topics (`Campus/KPI/#`, `Campus/ElecPlant/#`, and the rest in the campus table) | Confirmed live from the demo simulator | Subscribe to `DataCenter/Site/Campus/#` on the backend gateway |
+| Wing 02–04 broker subscriptions | Not confirmed | Repeat the Wing01 setup on each wing |
+| Full 2,000-point publish | Not what the demo simulator publishes | `KPI_UNS.md` is the live catalog. This file remains the register map |
