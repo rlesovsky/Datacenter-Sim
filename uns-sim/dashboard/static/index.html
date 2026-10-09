@@ -24,6 +24,19 @@
     </div>
   </header>
 
+  <form class="broker" id="broker-form">
+    <div class="broker-title">
+      <div class="kicker">Broker</div>
+      <div class="broker-note">IP, username, and password. Saved on this machine.</div>
+    </div>
+    <label>IP<input id="broker-host" name="host" autocomplete="off" required></label>
+    <label>Port<input id="broker-port" name="port" type="number" min="1" max="65535" required></label>
+    <label>Username<input id="broker-user" name="username" autocomplete="username"></label>
+    <label>Password<input id="broker-pass" name="password" type="password" autocomplete="current-password" placeholder="Unchanged if blank"></label>
+    <button type="submit">Connect</button>
+    <div class="broker-status" id="broker-status"></div>
+  </form>
+
   <nav class="tabs">
     <button type="button" data-tab="site" class="active">Site KPIs</button>
     <button type="button" data-tab="cdu">CDU</button>

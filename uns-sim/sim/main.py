@@ -15,6 +15,7 @@ print = functools.partial(print, flush=True)
 import yaml
 
 from catalog.build_catalog import parse_markdown, summarize, write_catalog
+from sim.broker_config import read_broker
 from sim.commands import apply_write, parse_write
 from sim.hall import Hall
 from sim.kpi import Campus, couple_kpis
@@ -34,6 +35,7 @@ def load_config(path: Path) -> dict:
             candidate = (base / candidate).resolve()
         return candidate
 
+    cfg["_config_path"] = path
     cfg["_config_dir"] = base
     cfg["catalog"] = resolve(cfg.get("catalog"))
     cfg["scenario"] = resolve(cfg.get("scenario"))
@@ -177,6 +179,9 @@ def run(cfg: dict, dry_run: bool) -> None:
     last = now
     next_stats = now + stats_every
     published_mark = publisher.published
+    config_path = cfg.get("_config_path")
+    broker_mtime = config_path.stat().st_mtime if config_path else 0.0
+    next_broker_check = now + 1.0
     try:
         while True:
             now = time.monotonic()
@@ -207,6 +212,19 @@ def run(cfg: dict, dry_run: bool) -> None:
                     point.due_at = now + point.scan_s / period_scale
                     if point.changed():
                         publisher.publish_campus(point)
+            if config_path and now >= next_broker_check:
+                next_broker_check = now + 1.0
+                try:
+                    mtime = config_path.stat().st_mtime
+                except OSError:
+                    mtime = broker_mtime
+                if mtime != broker_mtime:
+                    broker_mtime = mtime
+                    try:
+                        if publisher.reconfigure(read_broker(config_path)):
+                            publisher.publish_all()
+                    except Exception as exc:
+                        print(f"Broker change was not applied: {exc}")
             if now >= next_stats:
                 delta = publisher.published - published_mark
                 rate = delta / stats_every

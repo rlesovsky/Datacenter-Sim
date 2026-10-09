@@ -29,10 +29,9 @@ class UnsPublisher:
             client_id=broker.get("client_id") or "uns-sim",
             protocol=mqtt.MQTTv311,
         )
-        username = broker.get("username") or ""
-        password = broker.get("password") or ""
-        if username:
-            self.client.username_pw_set(username, password or None)
+        self._user = ""
+        self._password = ""
+        self._apply_login(broker)
         if broker.get("tls"):
             self.client.tls_set()
         self.client.reconnect_delay_set(1, 30)
@@ -46,6 +45,34 @@ class UnsPublisher:
     def connect(self) -> None:
         self.client.connect(self._host, self._port, keepalive=30)
         self.client.loop_start()
+
+    def _apply_login(self, broker: dict) -> None:
+        self._user = str(broker.get("username") or "")
+        self._password = str(broker.get("password") or "")
+        if self._user:
+            self.client.username_pw_set(self._user, self._password or None)
+        else:
+            self.client.username_pw_set(None, None)
+
+    def reconfigure(self, broker: dict) -> bool:
+        host = str(broker.get("host") or "127.0.0.1").strip()
+        port = int(broker.get("port") or 1883)
+        username = str(broker.get("username") or "")
+        password = str(broker.get("password") or "")
+        if (host, port, username, password) == (self._host, self._port, self._user, self._password):
+            return False
+        self._host = host
+        self._port = port
+        self.connected = False
+        try:
+            self.client.disconnect()
+        except Exception as exc:
+            print(f"MQTT disconnect before broker change: {exc}")
+        self._apply_login(broker)
+        self.client.connect_async(host, port, keepalive=30)
+        who = username or "anonymous"
+        print(f"Broker set to {host}:{port} as {who}")
+        return True
 
     def close(self) -> None:
         self.client.loop_stop()

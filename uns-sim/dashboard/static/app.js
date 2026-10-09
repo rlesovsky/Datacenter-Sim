@@ -417,12 +417,56 @@ function buildFans() {
 
 function apply(batch) {
   if (!batch) return;
+  if (batch.reset) {
+    Object.keys(points).forEach((name) => delete points[name]);
+  }
   if (typeof batch.connected === "boolean") connected = batch.connected;
   if (batch.enterprise) enterprise = batch.enterprise;
   if (batch.site) siteName = batch.site;
   if (batch.points) Object.assign(points, batch.points);
   discoverHall();
   dirty = true;
+}
+
+async function loadBroker() {
+  const response = await fetch("/api/broker");
+  if (!response.ok) return;
+  const broker = await response.json();
+  document.getElementById("broker-host").value = broker.host || "";
+  document.getElementById("broker-port").value = broker.port || 1883;
+  document.getElementById("broker-user").value = broker.username || "";
+  const status = document.getElementById("broker-status");
+  status.textContent = broker.host ? `Using ${broker.host}:${broker.port}` : "";
+}
+
+function bindBroker() {
+  document.getElementById("broker-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const status = document.getElementById("broker-status");
+    const body = {
+      host: document.getElementById("broker-host").value.trim(),
+      port: Number(document.getElementById("broker-port").value),
+      username: document.getElementById("broker-user").value,
+      password: document.getElementById("broker-pass").value,
+    };
+    status.textContent = "Connecting…";
+    const response = await fetch("/api/broker", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.ok === false) {
+      status.textContent = result.error || "Could not connect.";
+      return;
+    }
+    document.getElementById("broker-pass").value = "";
+    if (result.reset) {
+      Object.keys(points).forEach((name) => delete points[name]);
+      dirty = true;
+    }
+    status.textContent = `Using ${result.host}:${result.port}`;
+  });
 }
 
 async function boot() {
@@ -434,6 +478,8 @@ async function boot() {
   bindWrite("sp-air", "AireBlockMCP", "CCUSupAirTempSP");
   bindWrite("sp-room", "MiniAireBlock01", "RoomTempSP");
   bindWrite("sp-power", "TurboCell01", "PowerSP");
+  bindBroker();
+  loadBroker();
   const snapshot = await fetch("/api/state").then((response) => response.json());
   apply(snapshot);
   render();

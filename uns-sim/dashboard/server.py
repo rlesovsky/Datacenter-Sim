@@ -11,6 +11,8 @@ from pathlib import Path
 import paho.mqtt.client as mqtt
 import yaml
 
+from sim.broker_config import check_broker, read_broker, write_broker
+
 STATIC = Path(__file__).resolve().parent / "static"
 
 
@@ -36,6 +38,14 @@ class Hub:
     def snapshot(self) -> dict:
         with self._cond:
             return {"connected": self.connected, "points": dict(self.values)}
+
+    def clear(self) -> None:
+        with self._cond:
+            self.values.clear()
+            for client in self._clients:
+                client["pending"].clear()
+                client["pending"]["__reset__"] = True
+            self._cond.notify_all()
 
     def register(self) -> dict:
         client = {"pending": {}}
@@ -116,9 +126,26 @@ def start_mqtt(cfg: dict, hub: Hub) -> mqtt.Client:
     client.on_message = on_message
     host = broker.get("host") or "127.0.0.1"
     port = int(broker.get("port") or 1883)
-    client.connect(host, port, keepalive=30)
+    client.connect_async(host, port, keepalive=30)
     client.loop_start()
     return client
+
+
+def apply_broker(client: mqtt.Client, hub: Hub, broker: dict, enterprise: str, site: str) -> mqtt.Client:
+    hub.clear()
+    hub.set_connected(False)
+    try:
+        client.loop_stop()
+        client.disconnect()
+    except Exception as exc:
+        print(f"Dashboard disconnect before broker change: {exc}", flush=True)
+    fresh = start_mqtt({"broker": broker, "enterprise": enterprise, "site": site}, hub)
+    who = broker.get("username") or "anonymous"
+    print(
+        f"Dashboard broker set to {broker.get('host')}:{broker.get('port')} as {who}",
+        flush=True,
+    )
+    return fresh
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -126,6 +153,7 @@ class Handler(BaseHTTPRequestHandler):
     mqtt_client: mqtt.Client
     enterprise: str
     site: str
+    config_path: Path
 
     def log_message(self, fmt: str, *args) -> None:
         if args and "/events" in str(args[0]):
@@ -140,6 +168,21 @@ class Handler(BaseHTTPRequestHandler):
             body["site"] = self.site
             self._json(body)
             return
+        if path == "/api/broker":
+            try:
+                broker = read_broker(self.config_path)
+            except (OSError, ValueError, yaml.YAMLError):
+                self.send_error(500)
+                return
+            self._json(
+                {
+                    "host": broker["host"],
+                    "port": broker["port"],
+                    "username": broker["username"],
+                    "hasPassword": bool(broker["password"]),
+                }
+            )
+            return
         if path == "/events":
             self._events()
             return
@@ -150,7 +193,11 @@ class Handler(BaseHTTPRequestHandler):
         self._file(STATIC / name)
 
     def do_POST(self) -> None:
-        if self.path.split("?", 1)[0] != "/api/write":
+        path = self.path.split("?", 1)[0]
+        if path == "/api/broker":
+            self._save_broker()
+            return
+        if path != "/api/write":
             self.send_error(404)
             return
         length = int(self.headers.get("Content-Length") or 0)
@@ -172,6 +219,33 @@ class Handler(BaseHTTPRequestHandler):
         self.mqtt_client.publish(topic, payload, qos=1)
         self._json({"ok": True, "topic": topic})
 
+    def _save_broker(self) -> None:
+        length = int(self.headers.get("Content-Length") or 0)
+        try:
+            body = json.loads(self.rfile.read(length).decode("utf-8"))
+            host = str(body.get("host") or "").strip()
+            port = int(body.get("port"))
+            username = str(body.get("username") or "")
+            password = str(body.get("password") or "")
+        except (TypeError, ValueError, json.JSONDecodeError, UnicodeDecodeError):
+            self._json_error("Enter an IP, port, username, and password.")
+            return
+        problem = check_broker(host, port, username, password)
+        if problem:
+            self._json_error(problem)
+            return
+        try:
+            if password == "":
+                password = read_broker(self.config_path)["password"]
+            write_broker(self.config_path, host, port, username, password)
+            broker = read_broker(self.config_path)
+            Handler.mqtt_client = apply_broker(self.mqtt_client, self.hub, broker, self.enterprise, self.site)
+        except (OSError, ValueError, yaml.YAMLError) as exc:
+            print(f"Broker save failed: {exc}", flush=True)
+            self._json_error("The broker settings could not be saved.")
+            return
+        self._json({"ok": True, "host": host, "port": port, "reset": True})
+
     def _events(self) -> None:
         client = self.hub.register()
         try:
@@ -187,13 +261,25 @@ class Handler(BaseHTTPRequestHandler):
                 if not batch:
                     self.wfile.write(b": ping\n\n")
                 else:
-                    data = json.dumps({"connected": connected, "points": batch}).encode("utf-8")
+                    reset = bool(batch.pop("__reset__", False))
+                    data = json.dumps(
+                        {"connected": connected, "points": batch, "reset": reset}
+                    ).encode("utf-8")
                     self.wfile.write(b"data: " + data + b"\n\n")
                 self.wfile.flush()
         except (BrokenPipeError, ConnectionResetError, OSError):
             return
         finally:
             self.hub.unregister(client)
+
+    def _json_error(self, message: str) -> None:
+        raw = json.dumps({"ok": False, "error": message}).encode("utf-8")
+        self.send_response(400)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(raw)))
+        self.end_headers()
+        self.wfile.write(raw)
 
     def _json(self, body: dict) -> None:
         raw = json.dumps(body).encode("utf-8")
@@ -239,6 +325,7 @@ def main() -> None:
     Handler.mqtt_client = client
     Handler.enterprise = cfg["enterprise"]
     Handler.site = cfg["site"]
+    Handler.config_path = args.config
     server = ThreadingHTTPServer(("127.0.0.1", args.http_port), Handler)
     print(f"Dashboard http://127.0.0.1:{args.http_port}", flush=True)
     try:

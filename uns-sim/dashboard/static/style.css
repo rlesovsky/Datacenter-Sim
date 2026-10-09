@@ -69,11 +69,58 @@ h1 { margin: 0; font-size: 18px; font-weight: 650; }
 .chip.bad { background: var(--red-dim); color: var(--red); }
 .chip.idle { background: rgba(141, 155, 179, 0.12); color: var(--muted); }
 
+.broker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  align-items: flex-end;
+  margin-top: 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px 14px;
+}
+.broker-title { margin-right: 8px; min-width: 180px; }
+.broker-note { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.broker label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.broker input {
+  background: #0c121b;
+  border: 1px solid rgba(59, 130, 246, 0.45);
+  border-radius: 10px;
+  padding: 8px 10px;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 14px;
+}
+#broker-host { width: 170px; }
+#broker-port { width: 88px; }
+#broker-user, #broker-pass { width: 140px; }
+.broker button {
+  background: #1a2333;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.broker-status {
+  color: var(--muted);
+  font-size: 12px;
+  padding-bottom: 8px;
+}
+
 .tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 22px 0 18px;
+  margin: 14px 0 18px;
 }
 
 .tabs button {
