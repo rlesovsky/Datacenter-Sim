@@ -92,7 +92,7 @@ def start_mqtt(cfg: dict, hub: Hub) -> mqtt.Client:
 
     def on_message(client, userdata, message):
         parts = message.topic.split("/")
-        if len(parts) != 6 or parts[-1] == "set":
+        if parts[-1] == "set" or len(parts) not in (5, 6):
             return
         try:
             body = json.loads(message.payload.decode("utf-8"))
@@ -135,7 +135,10 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         path = self.path.split("?", 1)[0]
         if path == "/api/state":
-            self._json(self.hub.snapshot())
+            body = self.hub.snapshot()
+            body["enterprise"] = self.enterprise
+            body["site"] = self.site
+            self._json(body)
             return
         if path == "/events":
             self._events()

@@ -14,11 +14,12 @@ from sim.hall import Hall
 
 
 class UnsPublisher:
-    def __init__(self, cfg: dict, halls: dict[tuple[int, int], Hall], writes) -> None:
+    def __init__(self, cfg: dict, halls: dict[tuple[int, int], Hall], writes, campus=None) -> None:
         broker = cfg["broker"]
         self.enterprise = cfg["enterprise"]
         self.site = cfg["site"]
         self.halls = halls
+        self.campus = campus
         self.writes = writes
         self.connected = False
         self.reconnects = 0
@@ -78,7 +79,10 @@ class UnsPublisher:
             f"Hall{hall.hall:02d}/{point.cell}/{point.name}"
         )
 
-    def publish_point(self, hall: Hall, point) -> None:
+    def topic_for_campus(self, point) -> str:
+        return f"{self.enterprise}/{self.site}/Campus/{point.cell}/{point.name}"
+
+    def _publish(self, topic: str, point) -> None:
         body = {
             "value": point.publish_value(),
             "units": point.units_code,
@@ -86,16 +90,20 @@ class UnsPublisher:
             "ts": int(time.time() * 1000),
         }
         qos = 1 if point.category in ("Alarm", "Setpoint", "Command") else 0
-        self.client.publish(
-            self.topic_for(hall, point),
-            json.dumps(body, separators=(",", ":")),
-            qos=qos,
-            retain=True,
-        )
+        self.client.publish(topic, json.dumps(body, separators=(",", ":")), qos=qos, retain=True)
         point.mark_published()
         self.published += 1
+
+    def publish_point(self, hall: Hall, point) -> None:
+        self._publish(self.topic_for(hall, point), point)
+
+    def publish_campus(self, point) -> None:
+        self._publish(self.topic_for_campus(point), point)
 
     def publish_all(self) -> None:
         for hall in self.halls.values():
             for point in hall.points.values():
                 self.publish_point(hall, point)
+        if self.campus is not None:
+            for point in self.campus.points.values():
+                self.publish_campus(point)

@@ -17,6 +17,7 @@ import yaml
 from catalog.build_catalog import parse_markdown, summarize, write_catalog
 from sim.commands import apply_write, parse_write
 from sim.hall import Hall
+from sim.kpi import Campus, couple_kpis
 from sim.publish_uns import UnsPublisher
 from sim.scenario import Scenario
 
@@ -40,25 +41,36 @@ def load_config(path: Path) -> dict:
 
 
 def build_halls(cfg: dict, catalog: list[dict]) -> dict[tuple[int, int], Hall]:
+    hall_specs = [point for point in catalog if point.get("scope", "hall") == "hall"]
     halls = {}
     for wing in cfg["wings"]:
         for number in cfg["halls"]:
             halls[(int(wing), int(number))] = Hall(
-                int(wing), int(number), catalog, float(cfg.get("deadband_pct", 0.5))
+                int(wing), int(number), hall_specs, float(cfg.get("deadband_pct", 0.5))
             )
     return halls
 
 
-def print_summary(catalog: list[dict], halls: dict) -> None:
+def build_campus(cfg: dict, catalog: list[dict]) -> Campus:
+    campus_specs = [point for point in catalog if point.get("scope") == "campus"]
+    return Campus(campus_specs, float(cfg.get("deadband_pct", 0.5)))
+
+
+def print_summary(catalog: list[dict], halls: dict, cfg: dict) -> None:
     counts = summarize(catalog)
     kinds = Counter(point["value_kind"] for point in catalog)
-    print(f"Catalog: {len(catalog)} points per hall, {len(halls)} hall(s)")
+    hall_points = sum(1 for point in catalog if point.get("scope", "hall") == "hall")
+    campus_points = sum(1 for point in catalog if point.get("scope") == "campus")
+    print(
+        f"Catalog: {hall_points} hall points, {campus_points} campus points, "
+        f"{len(halls)} hall(s)"
+    )
     for cell, count in counts.items():
         print(f"  {cell}: {count}")
     print("Kinds: " + ", ".join(f"{name} {count}" for name, count in sorted(kinds.items())))
     sample = next(point for point in catalog if point["cell"] == "CDU01" and point["name"] == "ServerGlySupTemp")
     print(
-        "Sample topic: Enterprise/Site/Wing01/Hall01/CDU01/ServerGlySupTemp"
+        f"Sample topic: {cfg['enterprise']}/{cfg['site']}/Wing01/Hall01/CDU01/ServerGlySupTemp"
         f"  ({sample['units_code']}, {sample['scan']})"
     )
 
@@ -109,25 +121,31 @@ def run(cfg: dict, dry_run: bool) -> None:
     catalog = parse_markdown(catalog_path)
     write_catalog(catalog, Path(__file__).resolve().parents[1] / "catalog" / "catalog.json")
     halls = build_halls(cfg, catalog)
-    print_summary(catalog, halls)
+    campus = build_campus(cfg, catalog)
+    print_summary(catalog, halls, cfg)
     if dry_run:
         hall = next(iter(halls.values()))
         hall.couple(0.0)
         for point in hall.points.values():
             point.step(1.0, 1.0)
+        couple_kpis(halls, campus, 1.0)
         supply = hall.point("CDU01", "ServerGlySupTemp")
         returned = hall.point("CDU01", "ServerGlyRetTemp")
-        print(
-            f"Dry run CDU supply {supply.publish_value()} {supply.units_code}, "
-            f"return {returned.publish_value()} {returned.units_code}"
-        )
+        if supply is not None and returned is not None:
+            print(
+                f"Dry run CDU supply {supply.publish_value()} {supply.units_code}, "
+                f"return {returned.publish_value()} {returned.units_code}"
+            )
+        pue = campus.point("KPI", "PUE")
+        if pue is not None:
+            print(f"Dry run PUE {pue.publish_value()}")
         return
 
     scenario = Scenario(cfg["scenario"]) if cfg.get("scenario") else None
     if scenario:
         print(f"Scenario: {scenario.name} ({len(scenario.events)} events)")
     writes: queue.Queue = queue.Queue()
-    publisher = UnsPublisher(cfg, halls, writes)
+    publisher = UnsPublisher(cfg, halls, writes, campus)
     publisher.connect()
     deadline = time.time() + 15
     while not publisher.connected and time.time() < deadline:
@@ -138,11 +156,19 @@ def run(cfg: dict, dry_run: bool) -> None:
 
     sim_t = 0.0
     now = time.monotonic()
+    for _ in range(3):
+        for hall in halls.values():
+            hall.couple(60.0)
+            for point in hall.points.values():
+                point.step(60.0, 60.0)
+        couple_kpis(halls, campus, 0.0)
     for hall in halls.values():
-        hall.couple(0.0)
         for point in hall.points.values():
             point.due_at = now + random.random() * point.scan_s
-    print(f"Publishing initial snapshot ({sum(len(h.points) for h in halls.values())} topics)...")
+    for point in campus.points.values():
+        point.due_at = now + random.random() * point.scan_s
+    topic_count = sum(len(h.points) for h in halls.values()) + len(campus.points)
+    print(f"Publishing initial snapshot ({topic_count} topics)...")
     publisher.publish_all()
     print("Initial snapshot queued. Streaming changes.")
 
@@ -174,6 +200,13 @@ def run(cfg: dict, dry_run: bool) -> None:
                         point.due_at = now + point.scan_s / period_scale
                         if point.changed():
                             publisher.publish_point(hall, point)
+            couple_kpis(halls, campus, sim_t)
+            for point in campus.points.values():
+                point.step(dt_real * time_scale, sim_t)
+                if now >= point.due_at:
+                    point.due_at = now + point.scan_s / period_scale
+                    if point.changed():
+                        publisher.publish_campus(point)
             if now >= next_stats:
                 delta = publisher.published - published_mark
                 rate = delta / stats_every

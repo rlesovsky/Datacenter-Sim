@@ -32,13 +32,26 @@ UNIT_CODE = {
     "BTU/lb": "BTU/lb",
     "lb/s": "lb/s",
     "psi / °F": "psi/degF",
+    "kWh": "kWh",
+    "$": "USD",
+    "kg": "kg",
+    "kg/kWh": "kg/kWh",
+    "L/kWh": "L/kWh",
+    "min": "min",
+    "count": "count",
+    "ratio": "ratio",
+    "pf": "pf",
+    "scfm": "scfm",
 }
 
 
 def cells_for(heading: str) -> list[str]:
     title = heading.split("(", 1)[0].strip()
-    if title.lower().startswith("chiller01"):
+    lowered = title.lower()
+    if lowered.startswith("chiller") and " to " in lowered:
         return [f"Chiller{i:02d}" for i in range(1, 11)]
+    if title.startswith("Campus/"):
+        return [title.split("/", 1)[1]]
     return [title]
 
 
@@ -48,6 +61,8 @@ def split_row(line: str) -> list[str]:
 
 def value_kind(name: str, units: str, category: str, source: str) -> str:
     src = source.lower()
+    if category == "KPI":
+        return "calc"
     if category == "Command":
         return "command"
     if category == "Alarm":
@@ -105,6 +120,7 @@ def parse_markdown(path: Path) -> list[dict]:
         scan, scan_s = SCAN_GROUPS[scan_label]
         confirm = len(cols) > 7 and "⚑" in cols[7]
         kind = value_kind(name, units, category, source)
+        title = heading.split("(", 1)[0].strip()
         spec = {
             "name": name,
             "description": cols[1].strip(),
@@ -123,7 +139,8 @@ def parse_markdown(path: Path) -> list[dict]:
             if key in seen:
                 raise ValueError(f"Duplicate point {cell}/{name}")
             seen.add(key)
-            points.append({"cell": cell, **spec})
+            scope = "campus" if title.startswith("Campus/") else "hall"
+            points.append({"cell": cell, "scope": scope, **spec})
     return points
 
 

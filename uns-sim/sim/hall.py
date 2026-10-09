@@ -91,7 +91,11 @@ class Hall:
             delta_t = load_kw * 6.824 / flow
         else:
             delta_t = 0.0
-        header_dp = 3.0 + 6.0 * pumps + _ripple(t, 1.2, 0.8)
+        dp_sp = self.get("CDU01", "CHWHeaderDPSPLead")
+        if dp_sp is None:
+            header_dp = 3.0 + 6.0 * pumps + _ripple(t, 1.2, 0.8)
+        else:
+            header_dp = float(dp_sp) + _ripple(t, 1.2, 0.35)
         split = 0.06 * math.sin(t / 16.0)
         self._set("CDU01", "ServerGlySupTemp", supply_sp)
         self._set("CDU01", "ServerGlyRetTemp", supply_sp + delta_t)
@@ -134,7 +138,8 @@ class Hall:
             failed = bool(self.get("ChillerMCP", f"CH{index:02d}FailedAlm", False))
             running = enabled and not failed
             phase = index * 0.55
-            outlet = (56.0 if running else outside) + (_ripple(t, phase, 0.8) if running else 0.0)
+            supply_sp = float(self.get("ChillerMCP", "GlySupWaterTempSP", 56.0) or 56.0)
+            outlet = (supply_sp if running else outside) + (_ripple(t, phase, 0.8) if running else 0.0)
             inlet = outlet + ((10.0 + _ripple(t, phase + 0.4, 0.6)) if running else 0.5)
             outlets.append(outlet if running else None)
             capacity = 520.0 + _ripple(t, phase, 40.0) if running else 0.0

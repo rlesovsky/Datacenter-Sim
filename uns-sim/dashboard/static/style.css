@@ -71,6 +71,7 @@ h1 { margin: 0; font-size: 18px; font-weight: 650; }
 
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin: 22px 0 18px;
 }
@@ -108,7 +109,51 @@ h1 { margin: 0; font-size: 18px; font-weight: 650; }
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 12px;
+  align-items: stretch;
 }
+.kpis .card {
+  --tone: #4db8ff;
+  --ink: #8fd4ff;
+  display: flex;
+  flex-direction: column;
+  min-height: 176px;
+  position: relative;
+  overflow: hidden;
+}
+.kpis .card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--tone);
+}
+.kpis .card.tone-temp { --tone: #4db8ff; --ink: #8fd4ff; }
+.kpis .card.tone-flow { --tone: #2ec4b6; --ink: #7ee8dc; }
+.kpis .card.tone-power { --tone: #e2a31a; --ink: #ffd56a; }
+.kpis .card.tone-eff { --tone: #2fce8a; --ink: #7df0bf; }
+.kpis .card.warn { --tone: #e2a31a; --ink: #ffd56a; }
+.kpis .card.bad { --tone: #ff5d73; --ink: #ff9aab; }
+.kpis .value {
+  font-size: 32px;
+  line-height: 1.15;
+  min-height: 2.3em;
+  white-space: nowrap;
+  color: var(--ink);
+}
+.kpis .value small { color: color-mix(in srgb, var(--ink) 72%, var(--muted)); }
+.ink-temp { color: #8fd4ff; }
+.ink-flow { color: #7ee8dc; }
+.ink-power { color: #ffd56a; }
+.ink-eff { color: #7df0bf; }
+.ink-bad { color: #ff9aab; }
+.kpis canvas {
+  width: 100%;
+  height: 36px;
+  margin-top: auto;
+}
+.kpis .sub { min-height: 18px; }
 
 .card {
   background: var(--card);
@@ -139,8 +184,9 @@ h1 { margin: 0; font-size: 18px; font-weight: 650; }
   display: grid;
   grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.75fr);
   gap: 12px;
-  align-items: start;
+  align-items: stretch;
 }
+.layout > .card { height: 100%; }
 
 .stack { display: grid; gap: 12px; }
 
@@ -243,7 +289,7 @@ canvas { width: 100%; height: 72px; display: block; margin-top: 8px; }
 .zones { grid-template-columns: 1fr 1fr; }
 .ccus { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .chillers { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-.fans { grid-template-columns: repeat(9, minmax(0, 1fr)); }
+.fans { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .comps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
 .tile {
@@ -270,6 +316,8 @@ canvas { width: 100%; height: 72px; display: block; margin-top: 8px; }
   background: #102033;
   border: 1px solid rgba(61, 220, 151, 0.25);
   font-size: 12px;
+  white-space: pre-line;
+  min-height: 48px;
 }
 .fan.off { background: #141a22; border-color: var(--line); color: var(--muted); }
 

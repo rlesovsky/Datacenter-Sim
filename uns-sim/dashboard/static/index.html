@@ -17,171 +17,120 @@
     </div>
     <div class="alarms">
       <span class="label">ALARMS</span>
-      <span class="chip" id="alm-l1">L1</span>
-      <span class="chip" id="alm-l2">L2</span>
-      <span class="chip" id="alm-l3">L3</span>
-      <span class="chip" id="alm-l4">L4</span>
+      <span class="chip" id="alm-cdu">CDU</span>
+      <span class="chip" id="alm-fire">FIRE</span>
+      <span class="chip" id="alm-gen">GEN</span>
       <span class="chip" id="alm-broker">BROKER</span>
     </div>
   </header>
 
   <nav class="tabs">
-    <button type="button" data-tab="cdu" class="active">CDU</button>
-    <button type="button" data-tab="plant">Chiller Plant</button>
-    <button type="button" data-tab="air">Air Side</button>
+    <button type="button" data-tab="site" class="active">Site KPIs</button>
+    <button type="button" data-tab="cdu">CDU</button>
     <button type="button" data-tab="chiller">Chillers</button>
-    <button type="button" data-tab="mini">Mini AireBlock</button>
+    <button type="button" data-tab="air">Air</button>
+    <button type="button" data-tab="power">Power</button>
+    <button type="button" data-tab="gen">Generation</button>
+    <button type="button" data-tab="util">Utilities</button>
+    <button type="button" data-tab="fire">Fire</button>
   </nav>
 
   <div class="banner" id="banner">Waiting for the broker…</div>
 
-  <section class="tab show" id="tab-cdu">
+  <section class="tab show" id="tab-site">
     <div class="page-head">
       <div>
-        <h2>CDU-01</h2>
-        <div class="meta">Modbus TCP/IP · live UNS</div>
-      </div>
-      <div class="pills">
-        <span class="chip" id="cdu-run">—</span>
-        <span class="chip idle" id="cdu-pumps">—</span>
+        <h2>Site KPIs</h2>
+        <div class="meta">Schedule 1, plus PUE, CUE, and WUE. One hall stands in for the building.</div>
       </div>
     </div>
     <div class="kpis">
-      <article class="card"><div class="kicker">Server supply temp</div><div class="value" id="cdu-supply">—</div><div class="sub" id="cdu-supply-sub">SP —</div></article>
-      <article class="card" id="cdu-dp-card"><div class="kicker">Lowest header DP</div><div class="value" id="cdu-dp">—</div><div class="sub" id="cdu-dp-sub">SP —</div></article>
-      <article class="card"><div class="kicker">Server supply flow</div><div class="value" id="cdu-flow">—</div><div class="sub" id="cdu-flow-sub">Headers —</div></article>
-      <article class="card"><div class="kicker">Secondary cooling load</div><div class="value" id="cdu-load">—</div><div class="sub" id="cdu-load-sub">Primary —</div></article>
-    </div>
-    <div class="layout">
-      <div class="stack">
-        <article class="card">
-          <div class="kicker">Process</div>
-          <div class="process" style="margin-top:12px">
-            <div class="box">
-              <h3>Primary glycol</h3>
-              <div class="row"><span>S</span><b id="pri-s">—</b></div>
-              <div class="row"><span>R</span><b id="pri-r">—</b></div>
-              <div class="row"><span>Flow</span><b id="pri-f">—</b></div>
-            </div>
-            <div class="box">
-              <h3>Primary valve</h3>
-              <div class="row"><span>FB</span><b id="valve-fb">—</b></div>
-              <div class="row"><span>CMD</span><b id="valve-cmd">—</b></div>
-            </div>
-            <div class="box">
-              <h3>HX-1</h3>
-              <div class="row"><span>Strainer DP</span><b id="strainer">—</b></div>
-            </div>
-            <div class="box" id="pump-box"><h3>Pumps</h3></div>
-            <div class="box">
-              <h3>Headers</h3>
-              <div class="header-pair">
-                <div class="header-box" id="hdr-a"><div class="kicker">A</div><div id="hdr-a-txt">—</div></div>
-                <div class="header-box" id="hdr-b"><div class="kicker">B</div><div id="hdr-b-txt">—</div></div>
-              </div>
-            </div>
-          </div>
-        </article>
-        <article class="card">
-          <div class="metrics">
-            <div>
-              <div class="kicker">Server loop</div>
-              <div class="metric"><div class="name">Supply temp</div><div class="num" id="sec-s">—</div><div class="bar"><i id="bar-sec-s"></i></div></div>
-              <div class="metric"><div class="name">Return temp</div><div class="num" id="sec-r">—</div><div class="bar"><i id="bar-sec-r"></i></div></div>
-              <div class="metric"><div class="name">Supply flow</div><div class="num" id="sec-f">—</div><div class="bar"><i id="bar-sec-f"></i></div></div>
-              <div class="metric"><div class="name">Return pressure</div><div class="num" id="sec-p">—</div><div class="bar"><i id="bar-sec-p"></i></div></div>
-            </div>
-            <div>
-              <div class="kicker">Primary loop</div>
-              <div class="metric"><div class="name">Supply temp</div><div class="num" id="pri2-s">—</div><div class="bar"><i></i></div></div>
-              <div class="metric"><div class="name">Return temp</div><div class="num" id="pri2-r">—</div><div class="bar"><i></i></div></div>
-              <div class="metric"><div class="name">Flow</div><div class="num" id="pri2-f">—</div><div class="bar"><i></i></div></div>
-              <div class="metric"><div class="name">Valve feedback</div><div class="num" id="pri2-v">—</div><div class="bar"><i id="bar-valve"></i></div></div>
-            </div>
-          </div>
-        </article>
-      </div>
-      <div class="stack side">
-        <article class="card">
-          <div class="kicker">Setpoints</div>
-          <div class="field" style="margin-top:12px">
-            <label>Server glycol supply temp SP</label>
-            <input id="sp-supply" type="number" step="0.1" min="75" max="90">
-            <div class="hint">75 to 90 °F</div>
-          </div>
-          <div class="field">
-            <label>Header DP SP</label>
-            <input id="sp-dp" type="number" step="0.1" min="0" max="100">
-            <div class="hint">psi</div>
-          </div>
-        </article>
-        <article class="card">
-          <div class="kicker">Mode and status</div>
-          <div class="status-line"><span>System enable mode</span><b id="mode-enable">—</b></div>
-          <div class="status-line"><span>Local / remote</span><b id="mode-remote">—</b></div>
-          <div class="status-line"><span>Auto / manual</span><b id="mode-auto">—</b></div>
-          <div class="status-line"><span>Controller type</span><b id="mode-type">—</b></div>
-          <div class="status-line"><span>Active DP selection</span><b id="mode-dp">—</b></div>
-          <div class="kicker" style="margin-top:14px">Common alarms</div>
-          <div class="alarm-row">
-            <span class="chip" id="side-l1">L1</span>
-            <span class="chip" id="side-l2">L2</span>
-            <span class="chip" id="side-l3">L3</span>
-            <span class="chip" id="side-l4">L4</span>
-          </div>
-        </article>
-        <article class="card">
-          <div class="kicker">Commands</div>
-          <div class="cmds" style="margin-top:12px">
-            <button type="button" id="cmd-start">Local Start</button>
-            <button type="button" class="danger" id="cmd-stop">E-Stop</button>
-          </div>
-          <div class="hint">Sends the command to the simulator.</div>
-        </article>
-      </div>
-    </div>
-    <div class="trends">
-      <article class="card"><div class="kicker">Server supply temp</div><div class="trend-val" id="tr-cdu-t">—</div><canvas id="cv-cdu-t"></canvas></article>
-      <article class="card"><div class="kicker">Lowest header DP</div><div class="trend-val" id="tr-cdu-d">—</div><canvas id="cv-cdu-d"></canvas></article>
-      <article class="card"><div class="kicker">Server supply flow</div><div class="trend-val" id="tr-cdu-f">—</div><canvas id="cv-cdu-f"></canvas></article>
-      <article class="card"><div class="kicker">Secondary cooling load</div><div class="trend-val" id="tr-cdu-k">—</div><canvas id="cv-cdu-k"></canvas></article>
-    </div>
-  </section>
-
-  <section class="tab" id="tab-plant">
-    <div class="page-head">
-      <div>
-        <h2>Chiller Plant</h2>
-        <div class="meta">Chiller MCP · Modbus TCP/IP</div>
-      </div>
-      <div class="pills"><span class="chip" id="plant-count">—</span></div>
+      <article class="card tone-eff"><div class="kicker">PUE</div><div class="value" id="kpi-pue">—</div><canvas id="cv-pue"></canvas><div class="sub">Facility electrical / IT</div></article>
+      <article class="card tone-eff"><div class="kicker">CUE</div><div class="value" id="kpi-cue">—</div><canvas id="cv-cue"></canvas><div class="sub">kg CO₂ / IT kWh</div></article>
+      <article class="card tone-flow"><div class="kicker">WUE</div><div class="value" id="kpi-wue">—</div><canvas id="cv-wue"></canvas><div class="sub">L / IT kWh</div></article>
+      <article class="card tone-eff"><div class="kicker">Not available</div><div class="value" id="kpi-unavail">—</div><canvas id="cv-unavail"></canvas><div class="sub">Equipment out of service</div></article>
     </div>
     <div class="kpis">
-      <article class="card"><div class="kicker">Master supply temp</div><div class="value" id="mcp-sup">—</div><div class="sub" id="mcp-sup-sub">Running avg —</div></article>
-      <article class="card"><div class="kicker">Master return temp</div><div class="value" id="mcp-ret">—</div><div class="sub">Chilled water</div></article>
-      <article class="card"><div class="kicker">Glycol flow</div><div class="value" id="mcp-flow">—</div><div class="sub" id="mcp-flow-sub">Bypass —</div></article>
-      <article class="card"><div class="kicker">Outside air</div><div class="value" id="mcp-oa">—</div><div class="sub" id="mcp-oa-sub">Humidity —</div></article>
+      <article class="card tone-power"><div class="kicker">Utility demand</div><div class="value" id="kpi-demand">—</div><canvas id="cv-demand"></canvas><div class="sub" id="kpi-peak">Peak —</div></article>
+      <article class="card tone-power"><div class="kicker">Month energy</div><div class="value" id="kpi-month">—</div><canvas id="cv-month"></canvas><div class="sub" id="kpi-month-cost">Cost —</div></article>
+      <article class="card tone-power"><div class="kicker">Year to date</div><div class="value" id="kpi-ytd">—</div><canvas id="cv-ytd"></canvas><div class="sub" id="kpi-ytd-cost">Cost —</div></article>
+      <article class="card tone-eff"><div class="kicker">Site produced</div><div class="value" id="kpi-gen">—</div><canvas id="cv-produced"></canvas><div class="sub" id="kpi-gen-kwh">Energy —</div></article>
     </div>
     <div class="layout">
       <article class="card">
-        <div class="kicker">Chillers</div>
-        <div class="chillers" id="plant-grid" style="margin-top:12px"></div>
+        <div class="kicker">From each system</div>
+        <div class="status-line"><span>CDU supply / cooling load</span><b class="ink-temp" id="sys-cdu">—</b></div>
+        <div class="status-line"><span>Chiller water / chiller power</span><b class="ink-temp" id="sys-chiller">—</b></div>
+        <div class="status-line"><span>Cold aisle / room</span><b class="ink-temp" id="sys-air">—</b></div>
+        <div class="status-line"><span>Hall electrical / IT</span><b class="ink-power" id="sys-power">—</b></div>
+        <div class="status-line"><span>UPS load</span><b class="ink-power" id="sys-ups">—</b></div>
+        <div class="status-line"><span>TurboCell / lineup</span><b class="ink-eff" id="sys-gen">—</b></div>
+        <div class="status-line"><span>Fire panel</span><b class="ink-eff" id="sys-fire">—</b></div>
+        <div class="status-line"><span>Gas pressure / water</span><b class="ink-flow" id="sys-plant">—</b></div>
       </article>
       <article class="card side">
-        <div class="kicker">Plant setpoints</div>
-        <div class="field" style="margin-top:12px">
-          <label>Glycol supply water temp SP</label>
-          <input id="sp-gly" type="number" step="0.1" min="40" max="100">
-          <div class="hint">Writes ChillerMCP / GlySupWaterTempSP</div>
-        </div>
-        <div class="field">
-          <label>Differential pressure SP</label>
-          <input id="sp-mcp-dp" type="number" step="0.1" min="0" max="100">
-        </div>
-        <div class="status-line"><span>DP sensor A</span><b id="dp-a">—</b></div>
-        <div class="status-line"><span>DP sensor B</span><b id="dp-b">—</b></div>
-        <div class="status-line"><span>Expansion tank</span><b id="tank">—</b></div>
-        <div class="status-line"><span>Bypass valve</span><b id="bypass">—</b></div>
+        <div class="kicker">Also on the schedule</div>
+        <div class="status-line"><span>Green energy</span><b class="ink-eff" id="kpi-green">—</b></div>
+        <div class="status-line"><span>CO₂ this month</span><b class="ink-power" id="kpi-co2">—</b></div>
+        <div class="status-line"><span>CO₂ avoided</span><b class="ink-eff" id="kpi-saved">—</b></div>
+        <div class="status-line"><span>Tenant energy</span><b class="ink-power" id="kpi-tenant">—</b></div>
+        <div class="status-line"><span>Alarm response</span><b class="ink-temp" id="kpi-response">—</b></div>
+        <div class="sub">Cost is $0.072/kWh. Green energy is on-site generation. Tenant energy is 72% of IT until apportionment is confirmed.</div>
+      </article>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-cdu">
+    <div class="page-head">
+      <div>
+        <h2>CDU-01</h2>
+        <div class="meta">Coolant distribution · one unit</div>
+      </div>
+      <div class="pills"><span class="chip" id="cdu-run">—</span></div>
+    </div>
+    <div class="kpis">
+      <article class="card tone-temp"><div class="kicker">Supply temp</div><div class="value" id="cdu-supply">—</div><canvas id="cv-cdu-t"></canvas><div class="sub" id="cdu-dt">Return —</div></article>
+      <article class="card tone-flow"><div class="kicker">Supply flow</div><div class="value" id="cdu-flow">—</div><canvas id="cv-cdu-f"></canvas><div class="sub">Server glycol</div></article>
+      <article class="card tone-flow"><div class="kicker">Header DP</div><div class="value" id="cdu-dp">—</div><canvas id="cv-cdu-d"></canvas><div class="sub" id="cdu-dp-sub">Setpoint —</div></article>
+      <article class="card tone-power"><div class="kicker">Cooling load</div><div class="value" id="cdu-load">—</div><canvas id="cv-cdu-k"></canvas><div class="sub" id="cdu-valve">Valve —</div></article>
+    </div>
+    <div class="layout">
+      <article class="card">
+        <div class="kicker">Pumps</div>
+        <div class="pump"><div>P1</div><span class="chip" id="pump-pill-1">—</span><div class="spd" id="pump-spd-1">—</div></div>
+        <div class="pump"><div>P2</div><span class="chip" id="pump-pill-2">—</span><div class="spd" id="pump-spd-2">—</div></div>
+        <div class="pump"><div>P3</div><span class="chip" id="pump-pill-3">—</span><div class="spd" id="pump-spd-3">—</div></div>
+      </article>
+      <article class="card side">
+        <div class="kicker">Setpoints</div>
+        <div class="field" style="margin-top:12px"><label>Server glycol supply temp</label><input id="sp-supply" type="number" step="0.1" min="75" max="90"><div class="hint">75 to 90 °F</div></div>
+        <div class="field"><label>Header DP</label><input id="sp-dp" type="number" step="0.1" min="0" max="30"><div class="hint">psi</div></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-chiller">
+    <div class="page-head">
+      <div>
+        <h2>Chillers</h2>
+        <div class="meta">Plant, one chiller, and its condenser fans</div>
+      </div>
+      <div class="pills"><span class="chip" id="ch-run">—</span></div>
+    </div>
+    <div class="kpis">
+      <article class="card tone-temp"><div class="kicker">Plant supply</div><div class="value" id="ch-sup">—</div><canvas id="cv-ch-s"></canvas><div class="sub" id="ch-ret">Return —</div></article>
+      <article class="card tone-flow"><div class="kicker">Plant flow</div><div class="value" id="ch-flow">—</div><canvas id="cv-ch-f"></canvas><div class="sub">Glycol</div></article>
+      <article class="card tone-temp"><div class="kicker">CH-01 outlet</div><div class="value" id="ch-out">—</div><canvas id="cv-ch-o"></canvas><div class="sub">Glycol leaving the chiller</div></article>
+      <article class="card tone-power"><div class="kicker">CH-01 power</div><div class="value" id="ch-kw">—</div><canvas id="cv-ch-k"></canvas><div class="sub" id="ch-fans">Fans —</div></article>
+    </div>
+    <div class="layout">
+      <article class="card">
+        <div class="kicker">Condenser fans</div>
+        <div class="fans" id="fan-grid" style="margin-top:12px"></div>
+      </article>
+      <article class="card side">
+        <div class="kicker">Setpoint</div>
+        <div class="field" style="margin-top:12px"><label>Glycol supply water temp</label><input id="sp-gly" type="number" step="0.1" min="40" max="70"><div class="hint">°F. The plant supply follows this.</div></div>
       </article>
     </div>
   </section>
@@ -189,179 +138,95 @@
   <section class="tab" id="tab-air">
     <div class="page-head">
       <div>
-        <h2>Air Side</h2>
-        <div class="meta">AireBlock MCP · Modbus TCP/IP</div>
+        <h2>Air</h2>
+        <div class="meta">Hall air side and the mini CCU</div>
       </div>
-      <div class="pills"><span class="chip" id="air-online">—</span></div>
     </div>
     <div class="kpis">
-      <article class="card" id="air-cold-card"><div class="kicker">Cold aisle average</div><div class="value" id="air-cold">—</div><div class="sub" id="air-worst">Worst zone —</div></article>
-      <article class="card"><div class="kicker">CCU supply temp avg</div><div class="value" id="air-sup">—</div><div class="sub" id="air-sup-sub">SP —</div></article>
-      <article class="card"><div class="kicker">Hot aisle DP</div><div class="value" id="air-dp" style="font-size:32px">—</div><div class="sub" id="air-dp-sub">A / B</div></article>
-      <article class="card"><div class="kicker">CCU total</div><div class="value" id="air-kw">—</div><div class="sub" id="air-tons">—</div></article>
+      <article class="card tone-temp"><div class="kicker">Cold aisle</div><div class="value" id="air-cold">—</div><canvas id="cv-air-c"></canvas><div class="sub">Space temperature</div></article>
+      <article class="card tone-temp"><div class="kicker">CCU supply</div><div class="value" id="air-sup">—</div><canvas id="cv-air-s"></canvas><div class="sub" id="air-kw">Power —</div></article>
+      <article class="card tone-flow"><div class="kicker">Hot aisle DP</div><div class="value" id="air-dp">—</div><canvas id="cv-air-d"></canvas><div class="sub">Average A</div></article>
+      <article class="card tone-temp"><div class="kicker">Room</div><div class="value" id="air-room">—</div><canvas id="cv-air-r"></canvas><div class="sub" id="air-dis">Discharge —</div></article>
     </div>
     <div class="layout">
-      <div class="stack">
-        <article class="card">
-          <div class="kicker">Hall floor</div>
-          <div class="ccus" id="ccu-grid" style="margin:12px 0"></div>
-          <div class="zones" id="zone-grid"></div>
-        </article>
-      </div>
+      <article class="card">
+        <div class="kicker">Space</div>
+        <div class="status-line"><span>Room humidity</span><b class="ink-flow" id="air-hum">—</b></div>
+        <div class="status-line"><span>Discharge air</span><b class="ink-temp" id="air-discharge">—</b></div>
+        <div class="status-line"><span>CCU power</span><b class="ink-power" id="air-power">—</b></div>
+      </article>
       <article class="card side">
         <div class="kicker">Setpoints</div>
-        <div class="field" style="margin-top:12px">
-          <label>CCU supply air temp SP</label>
-          <input id="sp-air" type="number" step="0.1" min="40" max="100">
-        </div>
-        <div class="field">
-          <label>Differential pressure SP</label>
-          <input id="sp-air-dp" type="number" step="0.001" min="0" max="1">
-          <div class="hint">in/WC</div>
-        </div>
-        <div class="status-line"><span>DP A average</span><b id="air-dpa">—</b></div>
-        <div class="status-line"><span>DP B average</span><b id="air-dpb">—</b></div>
-        <div class="status-line"><span>DP min control</span><b id="air-dpmin">—</b></div>
-        <div class="status-line"><span>DP max control</span><b id="air-dpmax">—</b></div>
-        <div class="status-line"><span>CHW supply A / B</span><b id="air-chw">—</b></div>
+        <div class="field" style="margin-top:12px"><label>CCU supply air temp</label><input id="sp-air" type="number" step="0.1" min="55" max="80"><div class="hint">°F</div></div>
+        <div class="field"><label>Room temp</label><input id="sp-room" type="number" step="0.1" min="65" max="80"><div class="hint">°F</div></div>
       </article>
-    </div>
-    <div class="trends">
-      <article class="card"><div class="kicker">Cold aisle average</div><div class="trend-val" id="tr-air-t">—</div><canvas id="cv-air-t"></canvas></article>
-      <article class="card"><div class="kicker">CCU supply avg</div><div class="trend-val" id="tr-air-s">—</div><canvas id="cv-air-s"></canvas></article>
-      <article class="card"><div class="kicker">DP A average</div><div class="trend-val" id="tr-air-d">—</div><canvas id="cv-air-d"></canvas></article>
-      <article class="card"><div class="kicker">CCU total power</div><div class="trend-val" id="tr-air-k">—</div><canvas id="cv-air-k"></canvas></article>
     </div>
   </section>
 
-  <section class="tab" id="tab-chiller">
+  <section class="tab" id="tab-power">
     <div class="page-head">
       <div>
-        <div class="pager">
-          <button type="button" id="ch-prev" aria-label="Previous chiller">‹</button>
-          <h2 id="ch-title">CH-01</h2>
-          <button type="button" id="ch-next" aria-label="Next chiller">›</button>
-        </div>
-        <div class="meta" id="ch-meta">Chiller 1 of 10 · Modbus TCP/IP</div>
+        <h2>Power</h2>
+        <div class="meta">Hall electrical and one UPS</div>
       </div>
-      <div class="pills">
-        <span class="chip" id="ch-run">—</span>
-        <span class="chip idle" id="ch-enable">—</span>
-      </div>
+      <div class="pills"><span class="chip" id="ups-state">—</span></div>
     </div>
     <div class="kpis">
-      <article class="card"><div class="kicker">Glycol outlet temp</div><div class="value" id="ch-out">—</div><div class="sub" id="ch-out-sub">Inlet —</div></article>
-      <article class="card"><div class="kicker">Total cooling capacity</div><div class="value" id="ch-cap">—</div><div class="sub" id="ch-cap-sub">Fluid / mechanical —</div></article>
-      <article class="card"><div class="kicker">Active power</div><div class="value" id="ch-kw">—</div><div class="sub">Compressors, pumps, fans</div></article>
-      <article class="card"><div class="kicker">MPUE</div><div class="value" id="ch-mpue">—</div><div class="sub" id="ch-mode">Mode —</div></article>
-    </div>
-    <div class="stack">
-      <article class="card">
-        <div class="kicker">Compressors</div>
-        <div class="comps" id="comp-grid" style="margin-top:12px"></div>
-      </article>
-      <div class="layout">
-        <article class="card">
-          <div class="kicker">Condenser fans</div>
-          <div class="fans" id="fan-grid" style="margin-top:12px"></div>
-          <div class="sub" id="fan-sum" style="margin-top:8px">—</div>
-        </article>
-        <article class="card">
-          <div class="kicker">Glycol</div>
-          <div class="status-line"><span>Inlet temp</span><b id="gly-in">—</b></div>
-          <div class="status-line"><span>Outlet temp</span><b id="gly-out">—</b></div>
-          <div class="status-line"><span>Flow</span><b id="gly-flow">—</b></div>
-          <div class="status-line"><span>Return valve</span><b id="gly-ret">—</b></div>
-          <div class="status-line"><span>Bypass valve</span><b id="gly-byp">—</b></div>
-          <div class="status-line"><span>Approach</span><b id="gly-app">—</b></div>
-          <div class="status-line"><span>Runtime</span><b id="gly-hours">—</b></div>
-          <div class="status-line"><span>Source 1 / 2</span><b id="gly-volt">—</b></div>
-        </article>
-      </div>
-    </div>
-    <div class="trends">
-      <article class="card"><div class="kicker">Glycol outlet temp</div><div class="trend-val" id="tr-ch-t">—</div><canvas id="cv-ch-t"></canvas></article>
-      <article class="card"><div class="kicker">Total capacity</div><div class="trend-val" id="tr-ch-c">—</div><canvas id="cv-ch-c"></canvas></article>
-      <article class="card"><div class="kicker">Active power</div><div class="trend-val" id="tr-ch-k">—</div><canvas id="cv-ch-k"></canvas></article>
-      <article class="card"><div class="kicker">MPUE</div><div class="trend-val" id="tr-ch-m">—</div><canvas id="cv-ch-m"></canvas></article>
+      <article class="card tone-power"><div class="kicker">Hall electrical</div><div class="value" id="pwr-hall">—</div><canvas id="cv-pwr-h"></canvas><div class="sub" id="pwr-it">IT —</div></article>
+      <article class="card tone-eff"><div class="kicker">Power factor</div><div class="value" id="pwr-pf">—</div><canvas id="cv-pwr-p"></canvas><div class="sub" id="pwr-v">Voltage —</div></article>
+      <article class="card tone-power"><div class="kicker">UPS load</div><div class="value" id="pwr-ups">—</div><canvas id="cv-pwr-u"></canvas><div class="sub">Of UPS rating</div></article>
+      <article class="card tone-eff"><div class="kicker">Battery</div><div class="value" id="pwr-batt">—</div><canvas id="cv-pwr-b"></canvas><div class="sub">State of charge</div></article>
     </div>
   </section>
 
-  <section class="tab" id="tab-mini">
+  <section class="tab" id="tab-gen">
     <div class="page-head">
       <div>
-        <h2>Mini AireBlock CCU</h2>
-        <div class="meta">BACnet/IP · live UNS</div>
+        <h2>Generation</h2>
+        <div class="meta">One TurboCell and its lineup</div>
       </div>
-      <div class="pills">
-        <span class="chip" id="mini-run">—</span>
-        <span class="chip idle" id="mini-mode">—</span>
+      <div class="pills"><span class="chip" id="gen-run">—</span></div>
+    </div>
+    <div class="kpis">
+      <article class="card tone-power"><div class="kicker">TurboCell</div><div class="value" id="gen-unit">—</div><canvas id="cv-gen-u"></canvas><div class="sub" id="gen-alm">Alarm —</div></article>
+      <article class="card tone-power"><div class="kicker">Lineup</div><div class="value" id="gen-line">—</div><canvas id="cv-gen-l"></canvas><div class="sub" id="gen-online">Online —</div></article>
+      <article class="card tone-eff"><div class="kicker">Site produced</div><div class="value" id="gen-site">—</div><canvas id="cv-gen-s"></canvas><div class="sub" id="gen-kwh">Energy —</div></article>
+      <article class="card tone-eff"><div class="kicker">Green energy</div><div class="value" id="gen-green">—</div><canvas id="cv-gen-g"></canvas><div class="sub">On-site generation</div></article>
+    </div>
+    <article class="card side" style="max-width:360px">
+      <div class="kicker">Setpoint</div>
+      <div class="field" style="margin-top:12px"><label>TurboCell power</label><input id="sp-power" type="number" step="1" min="40" max="334"><div class="hint">40 to 334 kW</div></div>
+    </article>
+  </section>
+
+  <section class="tab" id="tab-util">
+    <div class="page-head">
+      <div>
+        <h2>Utilities</h2>
+        <div class="meta">Site gas and water</div>
       </div>
     </div>
     <div class="kpis">
-      <article class="card"><div class="kicker">Space temp</div><div class="value" id="mini-t">—</div><div class="sub" id="mini-t-sub">SP —</div></article>
-      <article class="card"><div class="kicker">Space humidity</div><div class="value" id="mini-h">—</div><div class="sub">Room humidity</div></article>
-      <article class="card"><div class="kicker">Discharge air temp</div><div class="value" id="mini-d">—</div><div class="sub" id="mini-d-sub">Return —</div></article>
-      <article class="card"><div class="kicker">Fan power</div><div class="value" id="mini-kw">—</div><div class="sub" id="mini-kw-sub">Fan 1 / Fan 2</div></article>
+      <article class="card tone-power"><div class="kicker">Gas pressure</div><div class="value" id="util-gp">—</div><canvas id="cv-gas-p"></canvas><div class="sub">Supply</div></article>
+      <article class="card tone-power"><div class="kicker">Gas flow</div><div class="value" id="util-gf">—</div><canvas id="cv-gas-f"></canvas><div class="sub">To the plant</div></article>
+      <article class="card tone-flow"><div class="kicker">Water flow</div><div class="value" id="util-wf">—</div><canvas id="cv-h2o-f"></canvas><div class="sub">WUE input</div></article>
+      <article class="card tone-flow"><div class="kicker">Water pressure</div><div class="value" id="util-wp">—</div><canvas id="cv-h2o-p"></canvas><div class="sub">Supply</div></article>
     </div>
-    <div class="layout">
-      <div class="stack">
-        <article class="card process">
-          <div class="box">
-            <h3>Return air</h3>
-            <div class="row"><span>Temp</span><b id="mini-ret">—</b></div>
-          </div>
-          <div class="box">
-            <h3>Coil CV-1</h3>
-            <div class="row"><span>CMD</span><b id="mini-cmd">—</b></div>
-            <div class="row"><span>FB</span><b id="mini-fb">—</b></div>
-            <div class="row"><span>CHWS</span><b id="mini-chws">—</b></div>
-            <div class="row"><span>CHWR</span><b id="mini-chwr">—</b></div>
-            <div class="row"><span>Flow</span><b id="mini-gpm">—</b></div>
-          </div>
-          <div class="box" id="mini-fans"><h3>Fans</h3></div>
-          <div class="box">
-            <h3>Discharge</h3>
-            <div class="row"><span>Temp</span><b id="mini-dis">—</b></div>
-            <div class="row"><span>Air DP</span><b id="mini-adp">—</b></div>
-          </div>
-        </article>
-        <article class="card metrics">
-          <div>
-            <div class="metric"><div class="name">Space temp</div><div class="num" id="m-space">—</div></div>
-            <div class="metric"><div class="name">Control temp</div><div class="num" id="m-ctrl">—</div></div>
-            <div class="metric"><div class="name">Discharge air</div><div class="num" id="m-dis">—</div></div>
-          </div>
-          <div>
-            <div class="metric"><div class="name">CHW supply</div><div class="num" id="m-chws">—</div></div>
-            <div class="metric"><div class="name">CHW return</div><div class="num" id="m-chwr">—</div></div>
-            <div class="metric"><div class="name">Valve flow</div><div class="num" id="m-flow">—</div></div>
-          </div>
-        </article>
+  </section>
+
+  <section class="tab" id="tab-fire">
+    <div class="page-head">
+      <div>
+        <h2>Fire</h2>
+        <div class="meta">Panel summary</div>
       </div>
-      <div class="stack side">
-        <article class="card">
-          <div class="kicker">Setpoints</div>
-          <div class="field" style="margin-top:12px"><label>Space temp SP</label><input id="sp-room" type="number" step="0.1"></div>
-          <div class="field"><label>Control temp SP</label><input id="sp-ctrl" type="number" step="0.1"></div>
-          <div class="field"><label>Return temp SP</label><input id="sp-ret" type="number" step="0.1"></div>
-          <div class="field"><label>Normal fan speed SP</label><input id="sp-fan" type="number" step="1" min="0" max="100"></div>
-        </article>
-        <article class="card">
-          <div class="kicker">Status</div>
-          <div class="status-line"><span>Unit enable</span><b id="st-en">—</b></div>
-          <div class="status-line"><span>A mechanical power</span><b id="st-a">—</b></div>
-          <div class="status-line"><span>B mechanical power</span><b id="st-b">—</b></div>
-          <div class="status-line"><span>Water leak</span><b id="st-leak">—</b></div>
-          <div class="status-line"><span>Unit fail</span><b id="st-fail">—</b></div>
-        </article>
-      </div>
+      <div class="pills"><span class="chip" id="fire-state">—</span></div>
     </div>
-    <div class="trends">
-      <article class="card"><div class="kicker">Space temp</div><div class="trend-val" id="tr-mini-t">—</div><canvas id="cv-mini-t"></canvas></article>
-      <article class="card"><div class="kicker">Discharge air</div><div class="trend-val" id="tr-mini-d">—</div><canvas id="cv-mini-d"></canvas></article>
-      <article class="card"><div class="kicker">Valve command</div><div class="trend-val" id="tr-mini-v">—</div><canvas id="cv-mini-v"></canvas></article>
-      <article class="card"><div class="kicker">Fan 1 speed</div><div class="trend-val" id="tr-mini-f">—</div><canvas id="cv-mini-f"></canvas></article>
+    <div class="kpis">
+      <article class="card tone-eff"><div class="kicker">Alarm</div><div class="value" id="fire-alm">—</div><canvas id="cv-fire-a"></canvas><div class="sub">Panel alarm</div></article>
+      <article class="card tone-eff"><div class="kicker">Trouble</div><div class="value" id="fire-trb">—</div><canvas id="cv-fire-t"></canvas><div class="sub">Panel trouble</div></article>
+      <article class="card tone-eff"><div class="kicker">Supervisory</div><div class="value" id="fire-sup">—</div><canvas id="cv-fire-s"></canvas><div class="sub">Panel supervisory</div></article>
+      <article class="card tone-eff"><div class="kicker">Not available</div><div class="value" id="fire-out">—</div><canvas id="cv-fire-o"></canvas><div class="sub">Equipment out of service</div></article>
     </div>
   </section>
 

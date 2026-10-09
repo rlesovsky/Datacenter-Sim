@@ -51,11 +51,23 @@ def normal_status(spec: dict) -> bool:
 def nominal_number(spec: dict) -> float:
     name = spec["name"]
     units = spec["units"]
+    if name == "PUE":
+        return 1.25
+    if name in ("CUE",):
+        return 0.39
+    if name == "WUE":
+        return 0.65
+    if name == "ITKW":
+        return 1400.0
+    if name in ("RealPowerKW", "SiteProducedKW", "PowerSP"):
+        return 300.0
     if spec["value_kind"] == "counter":
         return 1500.0
     if units == "°F":
         if "ServerGlySupTemp" in name:
             return 80.0
+        if name == "GlySupWaterTempSP":
+            return 56.0
         if "SP" in name and ("SupAir" in name or "Room" in name or "Control" in name):
             return 72.0
         if "SP" in name and "OA" in name:
@@ -123,6 +135,26 @@ def nominal_number(spec: dict) -> float:
         return 12.0
     if name == "MPUE":
         return 1.15
+    if units == "kWh":
+        return 100000.0
+    if units == "$":
+        return 7000.0
+    if units == "kg":
+        return 40000.0
+    if units == "kg/kWh":
+        return 0.39
+    if units == "L/kWh":
+        return 0.65
+    if units == "min":
+        return 18.0
+    if units == "count":
+        return 0.0
+    if units == "ratio":
+        return 1.25
+    if units == "pf":
+        return 0.97
+    if units == "scfm":
+        return 400.0
     return float(_enum_default(name))
 
 
@@ -145,6 +177,20 @@ def _band(spec: dict, nominal: float) -> tuple[float, float]:
 
 def _digits(spec: dict) -> int:
     units = spec["units"]
+    if units == "count":
+        return 0
+    if units == "pf":
+        return 3
+    if units == "scfm":
+        return 0
+    if spec.get("value_kind") == "calc":
+        if units in ("kWh", "$", "kg"):
+            return 0
+        if units == "psi":
+            return 1
+        if spec["name"] == "PUE":
+            return 3
+        return 2
     if units == "in/WC":
         return 3
     if units == "Hz" or spec["value_kind"] == "counter":
@@ -250,7 +296,7 @@ class PointState:
             self.deadband = _deadband(spec, number, deadband_pct)
             if self.kind == "analog":
                 self.target = number
-        if self.kind not in ("analog", "setpoint", "counter"):
+        if self.kind not in ("analog", "setpoint", "counter", "calc"):
             self.target = None
             self.deadband = 0.0
             self.lo, self.hi = 0.0, 0.0
@@ -258,6 +304,8 @@ class PointState:
             self.target = float(self.value)
             self.lo, self.hi = _band(spec, float(self.value))
             self.deadband = _deadband(spec, float(self.value), deadband_pct)
+        if self.kind == "calc" and self.units in ("kWh", "$", "kg"):
+            self.deadband = 1.0
 
     def set_target(self, target: float) -> None:
         if self.kind == "analog" and not self.forced:
@@ -266,6 +314,8 @@ class PointState:
     def step(self, dt: float, sim_t: float) -> None:
         if self.kind == "counter":
             self.value = float(self.value) + dt / 3600.0
+            return
+        if self.kind == "calc":
             return
         if self.kind == "command" and self.pulse_until is not None and sim_t >= self.pulse_until:
             self.value = False

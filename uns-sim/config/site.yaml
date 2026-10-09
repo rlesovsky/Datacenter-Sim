@@ -1,4 +1,4 @@
-# Local HiveMQ Edge. Plain UNS JSON, one hall.
+# Local HiveMQ. Plain UNS JSON, one hall.
 broker:
   host: 127.0.0.1
   port: 1883
@@ -7,7 +7,7 @@ broker:
   password: ""
   client_id: uns-sim-w1
 
-enterprise: Enterprise
+enterprise: DataCenter
 site: Site
 wings: [1]
 halls: [1]
@@ -16,7 +16,8 @@ halls: [1]
 mode: uns
 time_scale: 1.0
 deadband_pct: 0.5
-catalog: ../../docs/Data_Wing_UNS.md
+# Short KPI list. The full hall register map is docs/Data_Wing_UNS.md.
+catalog: ../../docs/KPI_UNS.md
 
 # Set to scenarios/cdu_pump_trip.yaml to run the pump-trip script.
 scenario: null
